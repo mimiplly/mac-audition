@@ -72,6 +72,8 @@ const judgeNames: Record<number, string> = {
   6: "Shin",
   7: "Arpo",
   8: "Mangpor",
+  9: "Judge09",
+  10: "Judge10",
 };
 
 function identity(request: Request) {
