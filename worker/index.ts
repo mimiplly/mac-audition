@@ -234,7 +234,7 @@ async function portalApi(request: Request, env: Env) {
         if (!target) return Response.json({ error: "Contestant not found" }, { status: 404 });
         await env.DB.prepare("INSERT INTO contestant_import_backups (created_at, row_count, snapshot_json) VALUES (?, ?, ?)").bind(new Date().toISOString(), contestantList.length, JSON.stringify(contestantList)).run();
         await env.DB.prepare("DELETE FROM contestants WHERE student_id = ? AND category = ?").bind(body.studentId, body.category).run();
-        return Response.json({ removed: target, contestants: await getContestants(env.DB) });
+        return Response.json({ removed: target, contestants: await getContestants(env.DB), name: user.name });
       }
       if (body.action === "preview" || body.action === "import") {
         const tsv = typeof body.tsv === "string" ? body.tsv : "";
@@ -247,7 +247,7 @@ async function portalApi(request: Request, env: Env) {
           token, new: newCount, updated: updatedCount, merged: parsed.merged, rejected: parsed.rejected.length,
           rejectedRows: parsed.rejected, rows: prepared.records,
         };
-        if (body.action === "preview") return Response.json({ preview });
+        if (body.action === "preview") return Response.json({ preview, name: user.name });
         if (body.previewToken !== token) return Response.json({ error: "Preview is required before import" }, { status: 409 });
         const snapshot = JSON.stringify(prepared.existing);
         const backup = await env.DB.prepare("INSERT INTO contestant_import_backups (created_at, row_count, snapshot_json) VALUES (?, ?, ?)").bind(new Date().toISOString(), prepared.existing.length, snapshot).run();
@@ -257,7 +257,7 @@ async function portalApi(request: Request, env: Env) {
           return env.DB.prepare("INSERT INTO contestants (participant_number, student_id, category, thai_name, thai_nickname, english_name, english_nickname, department, phone, line_id, instagram, available_dates, review_flags, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(record.participantNumber, record.studentId, record.category, record.thaiName, record.thaiNickname, record.englishName, record.englishNickname, record.department, record.phone, record.lineId, record.instagram, record.availableDates, record.reviewFlags, new Date().toISOString());
         });
         if (statements.length) await env.DB.batch(statements);
-        return Response.json({ imported: { new: newCount, updated: updatedCount, merged: parsed.merged, rejected: parsed.rejected.length, rejectedRows: parsed.rejected, backupId: backup.meta?.last_row_id || null }, contestants: await getContestants(env.DB) });
+        return Response.json({ imported: { new: newCount, updated: updatedCount, merged: parsed.merged, rejected: parsed.rejected.length, rejectedRows: parsed.rejected, backupId: backup.meta?.last_row_id || null }, contestants: await getContestants(env.DB), name: user.name });
       }
     }
     if (request.method === "GET" && user.role === "judge") {
@@ -266,10 +266,10 @@ async function portalApi(request: Request, env: Env) {
       return Response.json({ role: user.role, name: user.name, scores: scoreRows, contestants: contestantList });
     }
     if (request.method === "GET" && user.role === "admin") {
-      const result = await env.DB.prepare("SELECT participant_number, COUNT(*) AS judges, AVG(vocal+diction+musical+expression+stage + CASE WHEN CAST(participant_number AS INTEGER) > 14 THEN lyrics+presentation ELSE 0 END) AS average FROM scores GROUP BY participant_number").all();
+      const result = await env.DB.prepare("SELECT participant_number, COUNT(*) AS judges, AVG(vocal+diction+musical+expression+stage + CASE WHEN CAST(participant_number AS INTEGER) > 14 THEN lyrics+presentation ELSE 0 END) AS average, GROUP_CONCAT(judge_id) AS judge_ids FROM scores GROUP BY participant_number").all();
       const rows = new Map(result.results.map((r: Record<string, unknown>) => [String(r.participant_number), r]));
-      const rankings = contestantList.map(p => { const r = rows.get(p.participantNumber); const judges = Number(r?.judges || 0); return { ...p, number: p.participantNumber, name: p.englishName, judges, average: Number(r?.average || 0), complete: judges === 10 }; }).sort((a,b) => b.average-a.average || a.number.localeCompare(b.number));
-      return Response.json({ role: user.role, rankings, contestants: contestantList });
+      const rankings = contestantList.map(p => { const r = rows.get(p.participantNumber); const judges = Number(r?.judges || 0); const judgeIds = String(r?.judge_ids || "").split(",").filter(Boolean).map(Number); return { ...p, number: p.participantNumber, name: p.englishName, judges, judgeIds, average: Number(r?.average || 0), complete: judges === 10 }; }).sort((a,b) => b.average-a.average || a.number.localeCompare(b.number));
+      return Response.json({ role: user.role, name: user.name, rankings, contestants: contestantList, judgeNames });
     }
     if (request.method === "POST" && user.role === "judge") {
       const body = await request.json() as Record<string, unknown>; const participantNumber = String(body.participantNumber || "");
@@ -280,7 +280,7 @@ async function portalApi(request: Request, env: Env) {
       for (const [key,max] of Object.entries(limits)) { const value=Number(body[key]); if(!Number.isFinite(value)||value<0||value>max) return Response.json({error:`${key} ต้องอยู่ระหว่าง 0–${max}`},{status:400}); v[key]=Math.round(value); }
       const note=String(body.note||"").slice(0,500), updatedAt=new Date().toISOString();
       await env.DB.prepare("INSERT INTO scores (judge_id,participant_number,vocal,diction,musical,expression,stage,lyrics,presentation,note,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(judge_id,participant_number) DO UPDATE SET vocal=excluded.vocal,diction=excluded.diction,musical=excluded.musical,expression=excluded.expression,stage=excluded.stage,lyrics=excluded.lyrics,presentation=excluded.presentation,note=excluded.note,updated_at=excluded.updated_at").bind(user.judgeId,participantNumber,v.vocal,v.diction,v.musical,v.expression,v.stage,v.lyrics,v.presentation,note,updatedAt).run();
-      return Response.json({score:{participantNumber,...v,note,updatedAt,total:Object.values(v).reduce((a,b)=>a+b,0)}});
+      return Response.json({score:{participantNumber,...v,note,updatedAt,total:Object.values(v).reduce((a,b)=>a+b,0)}, name: user.name});
     }
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   } catch (error) {

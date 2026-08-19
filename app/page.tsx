@@ -6,7 +6,7 @@ type Language = "th" | "en";
 type Participant = { number: string; name: string; nickname?: string; thaiName?: string; thaiNickname?: string; category: Category };
 type Scores = { vocal: number; diction: number; musical: number; expression: number; stage: number; lyrics: number; presentation: number };
 type SavedScore = Scores & { participantNumber: string; note: string; total: number };
-type Ranking = Participant & { average: number; judges: number; complete: boolean };
+type Ranking = Participant & { average: number; judges: number; complete: boolean; judgeIds: number[] };
 type ImportPreview = { token: string; new: number; updated: number; merged: number; rejected: number; rejectedRows: Array<{ row: number; reason: string }> };
 
 const translations = {
@@ -79,6 +79,7 @@ export default function Home() {
   });
   const [pin, setPin] = useState(""); const [role, setRole] = useState<"judge" | "admin" | null>(null);
   const [judgeName, setJudgeName] = useState(""); const [saved, setSaved] = useState<Record<string, SavedScore>>({});
+  const [judgeNames, setJudgeNames] = useState<Record<number, string>>({});
   const [participantList, setParticipantList] = useState<Participant[]>(participants);
   const [selected, setSelected] = useState("001"); const [scores, setScores] = useState<Scores>(emptyScores);
   const [note, setNote] = useState(""); const [rankings, setRankings] = useState<Ranking[]>([]);
@@ -112,7 +113,7 @@ export default function Home() {
     e.preventDefault(); setBusy(true); setStatus("");
     const res = await fetch("/api/portal", { headers: { "x-portal-pin": pin } }); const data = await readJson(res); setBusy(false);
     if (!res.ok) return setStatus(data.error || "PIN ไม่ถูกต้อง");
-    setRole(data.role); setJudgeName(data.name || "Administrator");
+    setRole(data.role); setJudgeName(data.name || "Administrator"); setJudgeNames(data.judgeNames || {});
     setParticipantList(data.contestants.map(participantFromApi));
     if (data.role === "judge") setSaved(Object.fromEntries(data.scores.map((s: SavedScore) => [s.participantNumber, s]))); else setRankings(data.rankings);
   }
@@ -130,7 +131,7 @@ export default function Home() {
     const updated = { ...saved, [selected]: data.score }; setSaved(updated); setStatus("บันทึกคะแนนเรียบร้อย");
     const next = visibleParticipants.find((p) => !updated[p.number]); if (next) setTimeout(() => choose(next.number), 600);
   }
-  async function refreshAdmin() { setBusy(true); const res = await fetch("/api/portal", { headers: { "x-portal-pin": pin } }); const data = await readJson(res); setBusy(false); if (res.ok) { setRankings(data.rankings.map((item: any) => ({ ...item, name: item.englishName, nickname: item.englishNickname, thaiName: item.thaiName, thaiNickname: item.thaiNickname }))); setParticipantList(data.contestants.map(participantFromApi)); } }
+  async function refreshAdmin() { setBusy(true); const res = await fetch("/api/portal", { headers: { "x-portal-pin": pin } }); const data = await readJson(res); setBusy(false); if (res.ok) { setRankings(data.rankings.map((item: any) => ({ ...item, name: item.englishName, nickname: item.englishNickname, thaiName: item.thaiName, thaiNickname: item.thaiNickname, judgeIds: item.judgeIds || [] }))); setParticipantList(data.contestants.map(participantFromApi)); setJudgeNames(data.judgeNames || {}); } }
   async function previewImport() {
     setImportStatus(""); setImportPreview(null); setBusy(true);
     const res = await fetch("/api/portal", { method: "POST", headers: { "content-type": "application/json", "x-portal-pin": pin }, body: JSON.stringify({ action: "preview", tsv: importTsv }) });
@@ -142,7 +143,7 @@ export default function Home() {
     const data = await readJson(res); setBusy(false); if (!res.ok) return setImportStatus(data.error || "Import failed");
     setParticipantList(data.contestants.map(participantFromApi)); setImportStatus(`${data.imported.new} new, ${data.imported.updated} updated, ${data.imported.merged} merged, ${data.imported.rejected} rejected`); setImportPreview(null); setImportTsv("");
   }
-  function signOut() { setRole(null); setPin(""); setSaved({}); setRankings([]); }
+  function signOut() { setRole(null); setPin(""); setJudgeName(""); setJudgeNames({}); setSaved({}); setRankings([]); }
 
   if (!role) return <main className="login-shell"><section className="login-card">
     <LanguageToggle language={language} onChange={changeLanguage} label={text.language} /><div className="brand-mark">MC</div><p className="eyebrow">MAC SIIT AUDITION 2026</p><h1>{text.portal}</h1>
@@ -152,11 +153,11 @@ export default function Home() {
     {status && <p className="error" role="alert">{status}</p>}<p className="privacy">{text.privacy}</p>
   </section></main>;
 
-  if (role === "admin") return <main className="admin-shell"><header className="topbar"><div><p className="eyebrow">MAC SIIT AUDITION 2026</p><h1>{text.results}</h1></div><div className="header-actions"><LanguageToggle language={language} onChange={changeLanguage} label={text.language} /><button className="ghost" onClick={refreshAdmin} disabled={busy}>{text.refresh}</button><button className="ghost" onClick={signOut}>{text.signOut}</button></div></header>
+  if (role === "admin") return <main className="admin-shell"><header className="topbar"><div><p className="eyebrow">MAC SIIT AUDITION 2026</p><h1>{judgeName || text.results}</h1></div><div className="header-actions"><LanguageToggle language={language} onChange={changeLanguage} label={text.language} /><button className="ghost" onClick={refreshAdmin} disabled={busy}>{text.refresh}</button><button className="ghost" onClick={signOut}>{text.signOut}</button></div></header>
     <nav className="category-tabs admin-tabs" aria-label={text.categories.Vocal}>{categories.map(c => <button key={c} className={adminCategory===c?"active":""} onClick={()=>setAdminCategory(c)}>{categoryLabel(c)}<span>{participantList.filter(p=>p.category===c).length}</span></button>)}</nav>
     <section className="summary"><div><span>{text.participants}</span><strong>{participantList.length}</strong></div><div><span>{text.judgesExpected}</span><strong>10</strong></div><div><span>{categoryLabel(adminCategory)} {text.completed}</span><strong>{visibleRankings.filter(r => r.complete).length}/{visibleRankings.length}</strong></div></section>
     <section className="import-card"><h2>{text.importTitle}</h2><p>{text.importHint}</p><textarea value={importTsv} onChange={e => setImportTsv(e.target.value)} placeholder={text.paste} /><div className="save-row"><span>{importStatus}</span><div><button className="ghost" onClick={previewImport} disabled={busy || !importTsv.trim()}>{text.preview}</button><button onClick={importContestants} disabled={busy || !importPreview}>{text.backupImport}</button></div></div>{importPreview && <p className="import-preview">{text.previewText.replace("{new}", String(importPreview.new)).replace("{updated}", String(importPreview.updated)).replace("{merged}", String(importPreview.merged)).replace("{rejected}", String(importPreview.rejected))}{importPreview.rejectedRows.length ? ` (${importPreview.rejectedRows.map(r => `row ${r.row}: ${r.reason}`).join("; ")})` : ""}</p>}</section>
-    <section className="ranking-card"><div className="ranking-head"><div><h2>{categoryLabel(adminCategory)} {text.ranking}</h2></div><span>{text.privateAdmin}</span></div><div className="table-wrap"><table><thead><tr><th>{text.rank}</th><th>{text.contestant}</th><th>{text.judges}</th><th>{text.average}</th><th>{text.status}</th></tr></thead><tbody>{visibleRankings.map((r, i) => <tr key={r.number}><td><b className={i < 3 ? "rank top" : "rank"}>{i + 1}</b></td><td><strong>{participantLabel(r, language)}</strong><small>#{r.number}</small></td><td>{r.judges}/10</td><td className="score-cell">{r.average.toFixed(2)}</td><td><span className={r.complete ? "pill done" : "pill pending"}>{r.complete ? text.complete : text.progress}</span></td></tr>)}</tbody></table></div></section>
+    <section className="ranking-card"><div className="ranking-head"><div><h2>{categoryLabel(adminCategory)} {text.ranking}</h2></div><span>{text.privateAdmin}</span></div><div className="table-wrap"><table><thead><tr><th>{text.rank}</th><th>{text.contestant}</th><th>{text.judges}</th><th>{text.average}</th><th>{text.status}</th></tr></thead><tbody>{visibleRankings.map((r, i) => <tr key={r.number}><td><b className={i < 3 ? "rank top" : "rank"}>{i + 1}</b></td><td><strong>{participantLabel(r, language)}</strong><small>#{r.number}</small></td><td>{r.judgeIds.map((id: number) => judgeNames[id] || `Judge ${id}`).join(", ")}</td><td className="score-cell">{r.average.toFixed(2)}</td><td><span className={r.complete ? "pill done" : "pill pending"}>{r.complete ? text.complete : text.progress}</span></td></tr>)}</tbody></table></div></section>
   </main>;
 
   return <main className="judge-shell"><header className="topbar"><div><p className="eyebrow">MAC SIIT AUDITION 2026</p><h1>{judgeName}</h1></div><div className="progress-copy"><LanguageToggle language={language} onChange={changeLanguage} label={text.language} /><strong>{Object.keys(saved).length}/{participantList.length}</strong><span>{text.scored}</span></div></header>
