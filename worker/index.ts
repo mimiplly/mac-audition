@@ -100,6 +100,8 @@ async function initializeScoresTable(db: D1Database) {
       stage INTEGER NOT NULL,
       lyrics INTEGER NOT NULL,
       presentation INTEGER NOT NULL,
+      extra_a INTEGER NOT NULL DEFAULT 0,
+      extra_b INTEGER NOT NULL DEFAULT 0,
       note TEXT DEFAULT '' NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -107,6 +109,8 @@ async function initializeScoresTable(db: D1Database) {
   await db.prepare(
     "CREATE UNIQUE INDEX IF NOT EXISTS judge_participant_unique ON scores (judge_id, participant_number)",
   ).run();
+  try { await db.prepare("ALTER TABLE scores ADD COLUMN extra_a INTEGER NOT NULL DEFAULT 0").run(); } catch {}
+  try { await db.prepare("ALTER TABLE scores ADD COLUMN extra_b INTEGER NOT NULL DEFAULT 0").run(); } catch {}
 }
 
 async function initializeContestantsTable(db: D1Database) {
@@ -263,12 +267,12 @@ async function portalApi(request: Request, env: Env) {
       }
     }
     if (request.method === "GET" && user.role === "judge") {
-      const result = await env.DB.prepare("SELECT *, vocal+diction+musical+expression+stage + CASE WHEN CAST(participant_number AS INTEGER) > 14 THEN lyrics+presentation ELSE 0 END AS total FROM scores WHERE judge_id = ?").bind(user.judgeId).all();
+      const result = await env.DB.prepare("SELECT *, vocal+diction+musical+expression+stage+lyrics+presentation+extra_a+extra_b AS total FROM scores WHERE judge_id = ?").bind(user.judgeId).all();
       const scoreRows = result.results.map((row: Record<string, unknown>) => ({ ...row, participantNumber: row.participant_number, judgeId: row.judge_id, updatedAt: row.updated_at }));
       return Response.json({ role: user.role, name: user.name, scores: scoreRows, contestants: contestantList });
     }
     if (request.method === "GET" && user.role === "admin") {
-      const result = await env.DB.prepare("SELECT participant_number, COUNT(*) AS judges, AVG(vocal+diction+musical+expression+stage + CASE WHEN CAST(participant_number AS INTEGER) > 14 THEN lyrics+presentation ELSE 0 END) AS average, GROUP_CONCAT(judge_id) AS judge_ids FROM scores GROUP BY participant_number").all();
+      const result = await env.DB.prepare("SELECT participant_number, COUNT(*) AS judges, AVG(vocal+diction+musical+expression+stage+lyrics+presentation+extra_a+extra_b) AS average, GROUP_CONCAT(judge_id) AS judge_ids FROM scores GROUP BY participant_number").all();
       const rows = new Map(result.results.map((r: Record<string, unknown>) => [String(r.participant_number), r]));
       const rankings = contestantList.map(p => { const r = rows.get(p.participantNumber); const judges = Number(r?.judges || 0); const judgeIds = String(r?.judge_ids || "").split(",").filter(Boolean).map(Number); return { ...p, number: p.participantNumber, name: p.englishName, judges, judgeIds, average: Number(r?.average || 0), complete: judges === 10 }; }).sort((a,b) => b.average-a.average || a.number.localeCompare(b.number));
       return Response.json({ role: user.role, name: user.name, rankings, contestants: contestantList, judgeNames });
@@ -278,10 +282,10 @@ async function portalApi(request: Request, env: Env) {
       if (body.action === "preview" || body.action === "import") return Response.json({ error: "Admin access required" }, { status: 403 });
       const participant = contestantList.find(p => p.participantNumber === participantNumber);
       if (!participant) return Response.json({ error: "ไม่พบผู้เข้าแข่งขัน" }, { status: 400 });
-      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0 } : participant.category === "Guitar" ? { vocal:20,diction:25,musical:20,expression:20,stage:15,lyrics:0,presentation:0 } : participant.category === "Drums" ? { vocal:25,diction:35,musical:20,expression:15,stage:5,lyrics:0,presentation:0 } : { vocal:30,diction:25,musical:25,expression:5,stage:15,lyrics:0,presentation:0 }; const v: Record<string,number> = {};
+      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : participant.category === "Guitar" ? { vocal:15,diction:15,musical:10,expression:10,stage:10,lyrics:15,presentation:5,extra_a:10,extra_b:10 } : participant.category === "Drums" ? { vocal:40,diction:20,musical:20,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : { vocal:30,diction:25,musical:25,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 }; const v: Record<string,number> = {};
       for (const [key,max] of Object.entries(limits)) { const value=Number(body[key]); if(!Number.isFinite(value)||value<0||value>max) return Response.json({error:`${key} ต้องอยู่ระหว่าง 0–${max}`},{status:400}); v[key]=Math.round(value); }
       const note=String(body.note||"").slice(0,500), updatedAt=new Date().toISOString();
-      await env.DB.prepare("INSERT INTO scores (judge_id,participant_number,vocal,diction,musical,expression,stage,lyrics,presentation,note,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(judge_id,participant_number) DO UPDATE SET vocal=excluded.vocal,diction=excluded.diction,musical=excluded.musical,expression=excluded.expression,stage=excluded.stage,lyrics=excluded.lyrics,presentation=excluded.presentation,note=excluded.note,updated_at=excluded.updated_at").bind(user.judgeId,participantNumber,v.vocal,v.diction,v.musical,v.expression,v.stage,v.lyrics,v.presentation,note,updatedAt).run();
+      await env.DB.prepare("INSERT INTO scores (judge_id,participant_number,vocal,diction,musical,expression,stage,lyrics,presentation,extra_a,extra_b,note,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(judge_id,participant_number) DO UPDATE SET vocal=excluded.vocal,diction=excluded.diction,musical=excluded.musical,expression=excluded.expression,stage=excluded.stage,lyrics=excluded.lyrics,presentation=excluded.presentation,extra_a=excluded.extra_a,extra_b=excluded.extra_b,note=excluded.note,updated_at=excluded.updated_at").bind(user.judgeId,participantNumber,v.vocal,v.diction,v.musical,v.expression,v.stage,v.lyrics,v.presentation,v.extra_a,v.extra_b,note,updatedAt).run();
       return Response.json({score:{participantNumber,...v,note,updatedAt,total:Object.values(v).reduce((a,b)=>a+b,0)}, name: user.name});
     }
     return Response.json({ error: "Method not allowed" }, { status: 405 });

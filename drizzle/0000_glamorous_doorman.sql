@@ -9,6 +9,8 @@ CREATE TABLE `scores` (
 	`stage` integer NOT NULL,
 	`lyrics` integer NOT NULL,
 	`presentation` integer NOT NULL,
+	`extra_a` integer NOT NULL DEFAULT 0,
+	`extra_b` integer NOT NULL DEFAULT 0,
 	`note` text DEFAULT '' NOT NULL,
 	`updated_at` text NOT NULL
 );

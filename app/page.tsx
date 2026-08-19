@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 type Category = "Vocal" | "Guitar" | "Drums" | "Keyboard";
 type Language = "th" | "en";
 type Participant = { number: string; name: string; nickname?: string; thaiName?: string; thaiNickname?: string; category: Category };
-type Scores = { vocal: number; diction: number; musical: number; expression: number; stage: number; lyrics: number; presentation: number };
+type Scores = { vocal: number; diction: number; musical: number; expression: number; stage: number; lyrics: number; presentation: number; extraA: number; extraB: number };
 type SavedScore = Scores & { participantNumber: string; note: string; total: number };
 type Ranking = Participant & { average: number; judges: number; complete: boolean; judgeIds: number[] };
 type ImportPreview = { token: string; new: number; updated: number; merged: number; rejected: number; rejectedRows: Array<{ row: number; reason: string }> };
@@ -16,7 +16,7 @@ const translations = {
     importTitle: "นำเข้ารายชื่อผู้เข้าแข่งขัน", importHint: "สำหรับผู้ดูแลเท่านั้น วางข้อมูล TSV เพื่อดูตัวอย่าง สำรองข้อมูล และนำเข้า", paste: "วางข้อมูล TSV 11 คอลัมน์ที่นี่", preview: "ดูตัวอย่าง", backupImport: "สำรองข้อมูลและนำเข้า", previewText: "ตัวอย่าง: ใหม่ {new} รายการ, อัปเดต {updated}, รวมซ้ำ {merged}, ปฏิเสธ {rejected}",
     privateNote: "หมายเหตุส่วนตัว", optional: "ไม่บังคับ", notePlaceholder: "เพิ่มความคิดเห็นสั้น ๆ สำหรับผู้จัดงาน…", updateScore: "แก้ไขคะแนน", saveContinue: "บันทึกและไปต่อ", saving: "กำลังบันทึก…", saved: "บันทึกคะแนนเรียบร้อย", points: "คะแนน", participantLabel: "ผู้เข้าแข่งขัน", language: "ภาษาไทย",
     categories: { Vocal: "ร้องเพลง", Guitar: "กีตาร์", Drums: "กลอง", Keyboard: "คีย์บอร์ด" },
-    criteria: { vocal: "เทคนิคการร้อง", diction: "โทนเสียง / คุณภาพเสียง", musical: "จังหวะและการตรงเวลา", expression: "การแสดงอารมณ์", stage: "การแสดงบนเวที", technical: "ทักษะทางเทคนิค", accuracy: "ความแม่นยำและการควบคุม", musicalExpression: "การถ่ายทอดดนตรี", performance: "การแสดงและการอยู่บนเวที", preparedness: "การเตรียมพร้อม", impact: "ภาพรวมการนำเสนอ", groove: "การควบคุมกรูฟและไดนามิก", chordScale: "ทักษะคอร์ดและสเกล", playByEar: "ฟังเล่น", improvMusicality: "อิมโพรไวส์และการแสดงดนตรี", keyTranspose: "เปลี่ยนคีย์", grooveRhythm: "กรูฟและจังหวะ", basicTechnique: "ทักษะพื้นฐาน", grooveAdaptation: "ปรับเปลี่ยนกรูฟ", dynamics: "ควบคุมน้ำหนักเสียง", musicality: "การแสดงดนตรี", chordProgression: "ลำดับคอร์ด", timeGroove: "เวลาและกรูฟ", rhythmTiming: "จังหวะและการตรงเวลา" },
+    criteria: { vocal: "เทคนิคการร้อง", diction: "โทนเสียง / คุณภาพเสียง", musical: "จังหวะและการตรงเวลา", expression: "การแสดงอารมณ์", stage: "การแสดงบนเวที", technical: "ทักษะทางเทคนิค", accuracy: "ความแม่นยำและการควบคุม", musicalExpression: "การถ่ายทอดดนตรี", performance: "การแสดงและการอยู่บนเวที", preparedness: "การเตรียมพร้อม", impact: "ภาพรวมการนำเสนอ", groove: "การควบคุมกรูฟและไดนามิก", chordScale: "ทักษะคอร์ดและสเกล", playByEar: "ฟังเล่น", improvMusicality: "อิมโพรไวส์และการแสดงดนตรี", keyTranspose: "เปลี่ยนคีย์", grooveRhythm: "กรูฟและจังหวะ", basicTechnique: "ทักษะพื้นฐาน", grooveAdaptation: "ปรับเปลี่ยนกรูฟ", dynamics: "ควบคุมน้ำหนักเสียง", musicality: "การแสดงดนตรี", chordProgression: "ลำดับคอร์ด", timeGroove: "เวลาและกรูฟ", rhythmTiming: "จังหวะและการตรงเวลา", strumInTime: "การเล่นให้ตรงจังหวะ", scale: "รู้สเกลพื้นฐาน", improvise: "สามารถอิมโพรไวส์ได้พื้นฐาน ไม่จำเป็นต้อง Advanced", timeGrooveFull: "รักษาจังหวะได้คงที่ตลอดทั้งเพลง", grooveAdaptationFull: "เล่นตาม Groove ได้", dynamicsFull: "การควบคุมน้ำหนักเสียง Dynamic" },
   },
   en: {
     portal: "Judging Portal", privateJudge: "Private scoring for appointed judges", pin: "Judge or admin PIN", enter: "Enter portal", checking: "Checking…", privacy: "Scores are private and visible only to the organizer.",
@@ -24,7 +24,7 @@ const translations = {
     importTitle: "Contestant import", importHint: "Admin-only. Paste TSV data to preview, backup, and import.", paste: "Paste the 11-column TSV here", preview: "Preview", backupImport: "Backup & import", previewText: "Preview: {new} new, {updated} updated, {merged} merged, {rejected} rejected",
     privateNote: "Private note", optional: "Optional", notePlaceholder: "Add a short comment for the organizer…", updateScore: "Update score", saveContinue: "Save & continue", saving: "Saving…", saved: "Score saved", points: "points", participantLabel: "Participant", language: "English",
     categories: { Vocal: "Vocal", Guitar: "Guitar", Drums: "Drums", Keyboard: "Keyboard" },
-    criteria: { vocal: "Vocal Technique", diction: "Tone / Voice Quality", musical: "Rhythm & Timing", expression: "Expression / Emotion", stage: "Stage Presence / Performance", technical: "Technical Skill", accuracy: "Accuracy & Control", musicalExpression: "Musical Expression", performance: "Performance & Stage Presence", preparedness: "Preparedness", impact: "Overall Impact", groove: "Groove & Dynamic Control", chordScale: "Chord & Scale Technique", playByEar: "Play by Ear", improvMusicality: "Improvisation & Musicality", keyTranspose: "Key Transposition", grooveRhythm: "Groove & Rhythm", basicTechnique: "Basic Technique", grooveAdaptation: "Groove Adaptation", dynamics: "Dynamics", musicality: "Musicality", chordProgression: "Chord Progression", timeGroove: "Time & Groove", rhythmTiming: "Rhythm & Timing" },
+    criteria: { vocal: "Vocal Technique", diction: "Tone / Voice Quality", musical: "Rhythm & Timing", expression: "Expression / Emotion", stage: "Stage Presence / Performance", technical: "Technical Skill", accuracy: "Accuracy & Control", musicalExpression: "Musical Expression", performance: "Performance & Stage Presence", preparedness: "Preparedness", impact: "Overall Impact", groove: "Groove & Dynamic Control", chordScale: "Chord & Scale Technique", playByEar: "Play by Ear", improvMusicality: "Improvisation & Musicality", keyTranspose: "Key Transposition", grooveRhythm: "Groove & Rhythm", basicTechnique: "Basic Technique", grooveAdaptation: "Groove Adaptation", dynamics: "Dynamics", musicality: "Musicality", chordProgression: "Chord progression", timeGroove: "Time & Groove", rhythmTiming: "Rhythm & Timing", strumInTime: "Strum in time", scale: "Scale", improvise: "Improvise", timeGrooveFull: "Time & Groove", grooveAdaptationFull: "Groove Adaptation", dynamicsFull: "Dynamics" },
   },
 } as const;
 
@@ -51,25 +51,33 @@ const vocalCriteria: { key: keyof Scores; label: string; max: number }[] = [
   { key: "stage", label: "Stage Presence / Performance", max: 15 },
 ];
 const guitarCriteria: { key: keyof Scores; label: string; max: number }[] = [
-  { key: "diction", label: "Rhythm & Timing", max: 25 },
-  { key: "vocal", label: "Chord & Scale Technique", max: 20 },
-  { key: "musical", label: "Play by Ear", max: 20 },
-  { key: "expression", label: "Improvisation & Musicality", max: 20 },
-  { key: "stage", label: "Key Transposition", max: 15 },
+  { key: "vocal", label: "Chord progression", max: 15 },
+  { key: "diction", label: "Strum in time", max: 15 },
+  { key: "musical", label: "Play by ear", max: 10 },
+  { key: "expression", label: "Key transpose", max: 10 },
+  { key: "stage", label: "Scale", max: 10 },
+  { key: "lyrics", label: "Improvise", max: 15 },
+  { key: "presentation", label: "Key transpose", max: 5 },
+  { key: "extraA", label: "Strum in time", max: 10 },
+  { key: "extraB", label: "Play by ear", max: 10 },
+];
+const bassCriteria: { key: keyof Scores; label: string; max: number }[] = [
+  { key: "vocal", label: "Groove & Rhythm", max: 35 },
+  { key: "diction", label: "Scale", max: 20 },
+  { key: "musical", label: "Key transpose", max: 20 },
+  { key: "expression", label: "Play by ear", max: 25 },
 ];
 const drumCriteria: { key: keyof Scores; label: string; max: number }[] = [
-  { key: "diction", label: "Time & Groove", max: 35 },
-  { key: "vocal", label: "Basic Technique", max: 25 },
-  { key: "musical", label: "Groove Adaptation", max: 20 },
-  { key: "expression", label: "Dynamics", max: 15 },
-  { key: "stage", label: "Musicality", max: 5 },
+  { key: "vocal", label: "Time & Groove", max: 40 },
+  { key: "diction", label: "Basic Technique", max: 20 },
+  { key: "musical", label: "Dynamics", max: 20 },
+  { key: "expression", label: "Groove Adaptation", max: 20 },
 ];
 const keyboardCriteria: { key: keyof Scores; label: string; max: number }[] = [
-  { key: "vocal", label: "Chord Progression", max: 30 },
-  { key: "diction", label: "Rhythm & Timing", max: 25 },
-  { key: "musical", label: "Play by Ear", max: 25 },
-  { key: "stage", label: "Key Transposition", max: 15 },
-  { key: "expression", label: "Musicality", max: 5 },
+  { key: "vocal", label: "Chord progression", max: 30 },
+  { key: "diction", label: "Strum in time", max: 25 },
+  { key: "musical", label: "Play by ear", max: 25 },
+  { key: "expression", label: "Key transpose", max: 20 },
 ];
 const categories: Category[] = ["Vocal","Guitar","Drums","Keyboard"];
 const criteriaFor = (category: Category) => {
@@ -78,7 +86,7 @@ const criteriaFor = (category: Category) => {
   if (category === "Drums") return drumCriteria;
   return keyboardCriteria;
 };
-const emptyScores: Scores = { vocal: 0, diction: 0, musical: 0, expression: 0, stage: 0, lyrics: 0, presentation: 0 };
+const emptyScores: Scores = { vocal: 0, diction: 0, musical: 0, expression: 0, stage: 0, lyrics: 0, presentation: 0, extraA: 0, extraB: 0 };
 
 export default function Home() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -113,25 +121,27 @@ export default function Home() {
       if (key === "stage") return text.criteria.stage;
     }
     if (categoryValue === "Guitar") {
-      if (key === "vocal") return text.criteria.chordScale;
-      if (key === "diction") return text.criteria.rhythmTiming;
+      if (key === "vocal") return text.criteria.chordProgression;
+      if (key === "diction") return text.criteria.strumInTime;
       if (key === "musical") return text.criteria.playByEar;
-      if (key === "expression") return text.criteria.improvMusicality;
-      if (key === "stage") return text.criteria.keyTranspose;
+      if (key === "expression") return text.criteria.keyTranspose;
+      if (key === "stage") return text.criteria.scale;
+      if (key === "lyrics") return text.criteria.improvise;
+      if (key === "presentation") return text.criteria.keyTranspose;
+      if (key === "extraA") return text.criteria.strumInTime;
+      if (key === "extraB") return text.criteria.playByEar;
     }
     if (categoryValue === "Drums") {
-      if (key === "vocal") return text.criteria.basicTechnique;
-      if (key === "diction") return text.criteria.timeGroove;
-      if (key === "musical") return text.criteria.grooveAdaptation;
-      if (key === "expression") return text.criteria.dynamics;
-      if (key === "stage") return text.criteria.musicality;
+      if (key === "vocal") return text.criteria.timeGrooveFull;
+      if (key === "diction") return text.criteria.basicTechnique;
+      if (key === "musical") return text.criteria.dynamicsFull;
+      if (key === "expression") return text.criteria.grooveAdaptationFull;
     }
     if (categoryValue === "Keyboard") {
       if (key === "vocal") return text.criteria.chordProgression;
-      if (key === "diction") return text.criteria.rhythmTiming;
+      if (key === "diction") return text.criteria.strumInTime;
       if (key === "musical") return text.criteria.playByEar;
-      if (key === "expression") return text.criteria.musicality;
-      if (key === "stage") return text.criteria.keyTranspose;
+      if (key === "expression") return text.criteria.keyTranspose;
     }
     return key;
   }

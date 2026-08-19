@@ -77,6 +77,22 @@
           "notNull": true,
           "autoincrement": false
         },
+        "extra_a": {
+          "name": "extra_a",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "0"
+        },
+        "extra_b": {
+          "name": "extra_b",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "0"
+        },
         "note": {
           "name": "note",
           "type": "text",

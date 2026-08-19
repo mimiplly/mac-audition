@@ -29,5 +29,6 @@ export const scores = sqliteTable("scores", {
   musical: integer("musical").notNull(), expression: integer("expression").notNull(),
   stage: integer("stage").notNull(), lyrics: integer("lyrics").notNull(),
   presentation: integer("presentation").notNull(),
+  extraA: integer("extra_a").notNull().default(0), extraB: integer("extra_b").notNull().default(0),
   note: text("note").notNull().default(""), updatedAt: text("updated_at").notNull(),
 }, (table) => [uniqueIndex("judge_participant_unique").on(table.judgeId, table.participantNumber)]);
