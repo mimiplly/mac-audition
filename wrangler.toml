@@ -1,14 +1,23 @@
 name = "mac-siit-audition"
-main = "worker/index.ts"
+main = "dist/server/index.js"
 compatibility_date = "2026-05-22"
+compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 preview_urls = false
+no_bundle = true
 
-[env.development]
-vars = { ENVIRONMENT = "development" }
+[assets]
+directory = "dist/client"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "scoring"
 database_id = "55415484-39c9-41dc-a66e-c1c49498f36b"
 migrations_dir = "drizzle"
+
+[[rules]]
+type = "ESModule"
+globs = ["**/*.js", "**/*.mjs"]
+
+[env.development]
+vars = { ENVIRONMENT = "development" }
