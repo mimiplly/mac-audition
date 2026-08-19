@@ -1,0 +1,14 @@
+name = "vocal-judging-portal"
+main = "worker/index.ts"
+compatibility_date = "2026-05-22"
+workers_dev = true
+preview_urls = false
+
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+[[d1_databases]]
+binding = "DB"
+database_name = "scoring"
+database_id = "55415484-39c9-41dc-a66e-c1c49498f36b"
+migrations_dir = "drizzle"
