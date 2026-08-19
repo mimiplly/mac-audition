@@ -113,6 +113,15 @@ async function initializeScoresTable(db: D1Database) {
   ).run();
   try { await db.prepare("ALTER TABLE scores ADD COLUMN extra_a INTEGER NOT NULL DEFAULT 0").run(); } catch {}
   try { await db.prepare("ALTER TABLE scores ADD COLUMN extra_b INTEGER NOT NULL DEFAULT 0").run(); } catch {}
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS score_delete_backups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      deleted_at TEXT NOT NULL,
+      judge_id INTEGER NOT NULL,
+      participant_number TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL
+    )
+  `).run();
 }
 
 async function initializeContestantsTable(db: D1Database) {
@@ -236,7 +245,18 @@ async function portalApi(request: Request, env: Env) {
     await initializeContestantsTable(env.DB);
     const contestantList = await getContestants(env.DB);
     if (request.method === "POST" && user.role === "admin") {
-      const body = await request.json() as { action?: string; tsv?: string; previewToken?: string; studentId?: string; category?: string };
+      const body = await request.json() as { action?: string; tsv?: string; previewToken?: string; studentId?: string; category?: string; judgeId?: number; participantNumber?: string };
+      if (body.action === "deleteScore") {
+        const judgeId = Number(body.judgeId);
+        const participantNumber = String(body.participantNumber || "");
+        if (!Number.isInteger(judgeId) || judgeId < 1 || judgeId > 10 || !participantNumber) return Response.json({ error: "Invalid score target" }, { status: 400 });
+        const existing = await env.DB.prepare("SELECT * FROM scores WHERE judge_id = ? AND participant_number = ?").bind(judgeId, participantNumber).all();
+        const score = existing.results[0];
+        if (!score) return Response.json({ error: "Score not found" }, { status: 404 });
+        await env.DB.prepare("INSERT INTO score_delete_backups (deleted_at, judge_id, participant_number, snapshot_json) VALUES (?, ?, ?, ?)").bind(new Date().toISOString(), judgeId, participantNumber, JSON.stringify(score)).run();
+        await env.DB.prepare("DELETE FROM scores WHERE judge_id = ? AND participant_number = ?").bind(judgeId, participantNumber).run();
+        return Response.json({ deleted: true, judgeId, participantNumber, name: user.name });
+      }
       if (body.action === "remove" && body.studentId && body.category) {
         const target = contestantList.find((item) => item.studentId === body.studentId && item.category === body.category);
         if (!target) return Response.json({ error: "Contestant not found" }, { status: 404 });
@@ -275,9 +295,11 @@ async function portalApi(request: Request, env: Env) {
     }
     if (request.method === "GET" && user.role === "admin") {
       const result = await env.DB.prepare("SELECT participant_number, COUNT(*) AS judges, AVG(vocal+diction+musical+expression+stage+lyrics+presentation+extra_a+extra_b) AS average, GROUP_CONCAT(judge_id) AS judge_ids FROM scores GROUP BY participant_number").all();
+      const detailResult = await env.DB.prepare("SELECT *, vocal+diction+musical+expression+stage+lyrics+presentation+extra_a+extra_b AS total FROM scores ORDER BY CAST(participant_number AS INTEGER), participant_number, judge_id").all();
+      const scoreDetails = detailResult.results.map((row: Record<string, unknown>) => ({ ...row, participantNumber: String(row.participant_number), judgeId: Number(row.judge_id), updatedAt: String(row.updated_at), extraA: Number(row.extra_a || 0), extraB: Number(row.extra_b || 0), total: Number(row.total || 0), note: String(row.note || "") }));
       const rows = new Map(result.results.map((r: Record<string, unknown>) => [String(r.participant_number), r]));
       const rankings = contestantList.map(p => { const r = rows.get(p.participantNumber); const judges = Number(r?.judges || 0); const judgeIds = String(r?.judge_ids || "").split(",").filter(Boolean).map(Number); return { ...p, number: p.participantNumber, name: p.englishName, judges, judgeIds, average: Number(r?.average || 0), complete: judges === 10 }; }).sort((a,b) => b.average-a.average || a.number.localeCompare(b.number));
-      return Response.json({ role: user.role, name: user.name, rankings, contestants: contestantList, judgeNames });
+      return Response.json({ role: user.role, name: user.name, rankings, scoreDetails, contestants: contestantList, judgeNames });
     }
     if (request.method === "POST" && user.role === "judge") {
       const body = await request.json() as Record<string, unknown>; const participantNumber = String(body.participantNumber || "");
