@@ -63,11 +63,16 @@ type ImportResult = {
   merged: number;
 };
 
+const judgeNames: Record<number, string> = {
+  1: "Mimi", 2: "Caleb", 3: "Day", 4: "Fluke",
+  5: "Pun", 6: "Shin", 7: "Arpo", 8: "Mangpor",
+};
+
 function identity(request: Request) {
   const pin = request.headers.get("x-portal-pin") || "";
   if (pin === "9900") return { role: "admin", name: "Administrator", judgeId: 0 };
   const n = Number(pin) - 4100;
-  return n >= 1 && n <= 10 && Number.isInteger(n) ? { role: "judge", name: `Judge ${String(n).padStart(2, "0")}`, judgeId: n } : null;
+  return n >= 1 && n <= 8 && Number.isInteger(n) ? { role: "judge", name: judgeNames[n] || `Judge ${String(n).padStart(2, "0")}`, judgeId: n } : null;
 }
 
 async function initializeScoresTable(db: D1Database) {
