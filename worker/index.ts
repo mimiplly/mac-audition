@@ -80,7 +80,7 @@ function identity(request: Request) {
   const pin = request.headers.get("x-portal-pin") || "";
   if (pin === "9900") return { role: "admin", name: "Administrator", judgeId: 0 };
   const n = Number(pin) - 4100;
-  if (n >= 1 && n <= 8 && Number.isInteger(n)) {
+  if (n >= 1 && n <= 10 && Number.isInteger(n)) {
     const judgeName = judgeNames[n];
     return { role: "judge", name: judgeName, judgeId: n };
   }
@@ -278,7 +278,7 @@ async function portalApi(request: Request, env: Env) {
       if (body.action === "preview" || body.action === "import") return Response.json({ error: "Admin access required" }, { status: 403 });
       const participant = contestantList.find(p => p.participantNumber === participantNumber);
       if (!participant) return Response.json({ error: "ไม่พบผู้เข้าแข่งขัน" }, { status: 400 });
-      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0 } : { vocal:30,diction:20,musical:15,expression:15,stage:10,lyrics:5,presentation:5 }; const v: Record<string,number> = {};
+      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0 } : participant.category === "Guitar" ? { vocal:20,diction:25,musical:20,expression:20,stage:15,lyrics:0,presentation:0 } : participant.category === "Drums" ? { vocal:25,diction:35,musical:20,expression:15,stage:5,lyrics:0,presentation:0 } : { vocal:30,diction:25,musical:25,expression:5,stage:15,lyrics:0,presentation:0 }; const v: Record<string,number> = {};
       for (const [key,max] of Object.entries(limits)) { const value=Number(body[key]); if(!Number.isFinite(value)||value<0||value>max) return Response.json({error:`${key} ต้องอยู่ระหว่าง 0–${max}`},{status:400}); v[key]=Math.round(value); }
       const note=String(body.note||"").slice(0,500), updatedAt=new Date().toISOString();
       await env.DB.prepare("INSERT INTO scores (judge_id,participant_number,vocal,diction,musical,expression,stage,lyrics,presentation,note,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(judge_id,participant_number) DO UPDATE SET vocal=excluded.vocal,diction=excluded.diction,musical=excluded.musical,expression=excluded.expression,stage=excluded.stage,lyrics=excluded.lyrics,presentation=excluded.presentation,note=excluded.note,updated_at=excluded.updated_at").bind(user.judgeId,participantNumber,v.vocal,v.diction,v.musical,v.expression,v.stage,v.lyrics,v.presentation,note,updatedAt).run();

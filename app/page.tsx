@@ -16,7 +16,7 @@ const translations = {
     importTitle: "นำเข้ารายชื่อผู้เข้าแข่งขัน", importHint: "สำหรับผู้ดูแลเท่านั้น วางข้อมูล TSV เพื่อดูตัวอย่าง สำรองข้อมูล และนำเข้า", paste: "วางข้อมูล TSV 11 คอลัมน์ที่นี่", preview: "ดูตัวอย่าง", backupImport: "สำรองข้อมูลและนำเข้า", previewText: "ตัวอย่าง: ใหม่ {new} รายการ, อัปเดต {updated}, รวมซ้ำ {merged}, ปฏิเสธ {rejected}",
     privateNote: "หมายเหตุส่วนตัว", optional: "ไม่บังคับ", notePlaceholder: "เพิ่มความคิดเห็นสั้น ๆ สำหรับผู้จัดงาน…", updateScore: "แก้ไขคะแนน", saveContinue: "บันทึกและไปต่อ", saving: "กำลังบันทึก…", saved: "บันทึกคะแนนเรียบร้อย", points: "คะแนน", participantLabel: "ผู้เข้าแข่งขัน", language: "ภาษาไทย",
     categories: { Vocal: "ร้องเพลง", Guitar: "กีตาร์", Drums: "กลอง", Keyboard: "คีย์บอร์ด" },
-    criteria: { vocal: "เทคนิคการร้อง", diction: "โทนเสียง / คุณภาพเสียง", musical: "จังหวะและการตรงเวลา", expression: "การแสดงอารมณ์", stage: "การแสดงบนเวที", technical: "ทักษะทางเทคนิค", accuracy: "ความแม่นยำและการควบคุม", musicalExpression: "การถ่ายทอดดนตรี", performance: "การแสดงและการอยู่บนเวที", preparedness: "การเตรียมพร้อม", impact: "ภาพรวมการนำเสนอ", groove: "การควบคุมกรูฟและไดนามิก" },
+    criteria: { vocal: "เทคนิคการร้อง", diction: "โทนเสียง / คุณภาพเสียง", musical: "จังหวะและการตรงเวลา", expression: "การแสดงอารมณ์", stage: "การแสดงบนเวที", technical: "ทักษะทางเทคนิค", accuracy: "ความแม่นยำและการควบคุม", musicalExpression: "การถ่ายทอดดนตรี", performance: "การแสดงและการอยู่บนเวที", preparedness: "การเตรียมพร้อม", impact: "ภาพรวมการนำเสนอ", groove: "การควบคุมกรูฟและไดนามิก", chordScale: "ทักษะคอร์ดและสเกล", playByEar: "ฟังเล่น", improvMusicality: "อิมโพรไวส์และการแสดงดนตรี", keyTranspose: "เปลี่ยนคีย์", grooveRhythm: "กรูฟและจังหวะ", basicTechnique: "ทักษะพื้นฐาน", grooveAdaptation: "ปรับเปลี่ยนกรูฟ", dynamics: "ควบคุมน้ำหนักเสียง", musicality: "การแสดงดนตรี", chordProgression: "ลำดับคอร์ด", timeGroove: "เวลาและกรูฟ", rhythmTiming: "จังหวะและการตรงเวลา" },
   },
   en: {
     portal: "Judging Portal", privateJudge: "Private scoring for appointed judges", pin: "Judge or admin PIN", enter: "Enter portal", checking: "Checking…", privacy: "Scores are private and visible only to the organizer.",
@@ -24,7 +24,7 @@ const translations = {
     importTitle: "Contestant import", importHint: "Admin-only. Paste TSV data to preview, backup, and import.", paste: "Paste the 11-column TSV here", preview: "Preview", backupImport: "Backup & import", previewText: "Preview: {new} new, {updated} updated, {merged} merged, {rejected} rejected",
     privateNote: "Private note", optional: "Optional", notePlaceholder: "Add a short comment for the organizer…", updateScore: "Update score", saveContinue: "Save & continue", saving: "Saving…", saved: "Score saved", points: "points", participantLabel: "Participant", language: "English",
     categories: { Vocal: "Vocal", Guitar: "Guitar", Drums: "Drums", Keyboard: "Keyboard" },
-    criteria: { vocal: "Vocal Technique", diction: "Tone / Voice Quality", musical: "Rhythm & Timing", expression: "Expression / Emotion", stage: "Stage Presence / Performance", technical: "Technical Skill", accuracy: "Accuracy & Control", musicalExpression: "Musical Expression", performance: "Performance & Stage Presence", preparedness: "Preparedness", impact: "Overall Impact", groove: "Groove & Dynamic Control" },
+    criteria: { vocal: "Vocal Technique", diction: "Tone / Voice Quality", musical: "Rhythm & Timing", expression: "Expression / Emotion", stage: "Stage Presence / Performance", technical: "Technical Skill", accuracy: "Accuracy & Control", musicalExpression: "Musical Expression", performance: "Performance & Stage Presence", preparedness: "Preparedness", impact: "Overall Impact", groove: "Groove & Dynamic Control", chordScale: "Chord & Scale Technique", playByEar: "Play by Ear", improvMusicality: "Improvisation & Musicality", keyTranspose: "Key Transposition", grooveRhythm: "Groove & Rhythm", basicTechnique: "Basic Technique", grooveAdaptation: "Groove Adaptation", dynamics: "Dynamics", musicality: "Musicality", chordProgression: "Chord Progression", timeGroove: "Time & Groove", rhythmTiming: "Rhythm & Timing" },
   },
 } as const;
 
@@ -42,16 +42,7 @@ function LanguageToggle({ language, onChange, label }: { language: Language; onC
   return <div className="language-toggle" aria-label={label}><button className={language === "th" ? "active" : ""} onClick={() => onChange("th")} type="button">ไทย</button><button className={language === "en" ? "active" : ""} onClick={() => onChange("en")} type="button">English</button></div>;
 }
 
-const participants: Participant[] = [
-  ["001", "Patimakon Yaemsukhon (Kaopun)","Vocal"], ["002", "Naing Mana (David)","Vocal"], ["003", "Khemmakorn Thongdee (Khem)","Vocal"],
-  ["004", "Monpatch Lakesuwankun (Mie)","Vocal"], ["005", "Thiwatsakorn Panyanan (Baitoey)","Vocal"], ["006", "Pongdanal Sompan (Oak)","Vocal"],
-  ["007", "Nachachon Chaowakarn (Mana)","Vocal"], ["008", "Punika Chaiadisai (Namhorm)","Vocal"], ["009", "Rachasak Manuspienlerd (Punpun)","Vocal"],
-  ["010", "Thanakrit Kasemsiraphop (Namon)","Vocal"], ["011", "Pakorn Limpornchitwilai (Tan)","Vocal"], ["012", "Nuttawiroj Chankaew (Moto)","Vocal"],
-  ["013", "Thanyaphat Tussakul (Percy)","Vocal"], ["014", "Kulnicha Khajornphisitsak (Eingko)","Vocal"],
-  ["015", "Thaam Wyachai (Dylan)","Guitar"], ["016", "Siwakorn Sirisap (Fame)","Guitar"], ["017", "Poomrapee Neekong (Poom)","Guitar"],
-  ["018", "Jittipat Kanjanavikat (August)","Guitar"], ["019", "Saharat Nirnatasukwong (Windows)","Guitar"],
-  ["020", "Konchanok Sriyuttakrai (Unseen)","Drums"], ["021", "Teychit Phattharathanasut (HengHeng)","Keyboard"],
-].map(([number, name, category]) => ({ number, name, category: category as Category }));
+const participants: Participant[] = [];
 const vocalCriteria: { key: keyof Scores; label: string; max: number }[] = [
   { key: "vocal", label: "Vocal Technique", max: 30 },
   { key: "diction", label: "Tone / Voice Quality", max: 20 },
@@ -59,15 +50,34 @@ const vocalCriteria: { key: keyof Scores; label: string; max: number }[] = [
   { key: "expression", label: "Expression / Emotion", max: 20 },
   { key: "stage", label: "Stage Presence / Performance", max: 15 },
 ];
-const instrumentCriteria: { key: keyof Scores; label: string; max: number }[] = [
-  { key:"vocal",label:"Technical Skill",max:30 }, { key:"diction",label:"Rhythm & Timing",max:20 },
-  { key:"musical",label:"Accuracy & Control",max:15 }, { key:"expression",label:"Musical Expression",max:15 },
-  { key:"stage",label:"Performance & Stage Presence",max:10 }, { key:"lyrics",label:"Preparedness",max:5 },
-  { key:"presentation",label:"Overall Impact",max:5 },
+const guitarCriteria: { key: keyof Scores; label: string; max: number }[] = [
+  { key: "diction", label: "Rhythm & Timing", max: 25 },
+  { key: "vocal", label: "Chord & Scale Technique", max: 20 },
+  { key: "musical", label: "Play by Ear", max: 20 },
+  { key: "expression", label: "Improvisation & Musicality", max: 20 },
+  { key: "stage", label: "Key Transposition", max: 15 },
 ];
-const drumCriteria = instrumentCriteria.map(c => c.key === "musical" ? {...c,label:"Groove & Dynamic Control"} : c);
+const drumCriteria: { key: keyof Scores; label: string; max: number }[] = [
+  { key: "diction", label: "Time & Groove", max: 35 },
+  { key: "vocal", label: "Basic Technique", max: 25 },
+  { key: "musical", label: "Groove Adaptation", max: 20 },
+  { key: "expression", label: "Dynamics", max: 15 },
+  { key: "stage", label: "Musicality", max: 5 },
+];
+const keyboardCriteria: { key: keyof Scores; label: string; max: number }[] = [
+  { key: "vocal", label: "Chord Progression", max: 30 },
+  { key: "diction", label: "Rhythm & Timing", max: 25 },
+  { key: "musical", label: "Play by Ear", max: 25 },
+  { key: "stage", label: "Key Transposition", max: 15 },
+  { key: "expression", label: "Musicality", max: 5 },
+];
 const categories: Category[] = ["Vocal","Guitar","Drums","Keyboard"];
-const criteriaFor = (category: Category) => category === "Vocal" ? vocalCriteria : category === "Drums" ? drumCriteria : instrumentCriteria;
+const criteriaFor = (category: Category) => {
+  if (category === "Vocal") return vocalCriteria;
+  if (category === "Guitar") return guitarCriteria;
+  if (category === "Drums") return drumCriteria;
+  return keyboardCriteria;
+};
 const emptyScores: Scores = { vocal: 0, diction: 0, musical: 0, expression: 0, stage: 0, lyrics: 0, presentation: 0 };
 
 export default function Home() {
@@ -88,20 +98,42 @@ export default function Home() {
   const [category, setCategory] = useState<Category>("Vocal"); const [adminCategory, setAdminCategory] = useState<Category>("Vocal");
   const text = translations[language];
   const total = useMemo(() => Object.values(scores).reduce((a, b) => a + b, 0), [scores]);
-  const current = participantList.find((p) => p.number === selected) || participantList[0];
-  const criteria = criteriaFor(current.category);
+  const current = participantList.length ? (participantList.find((p) => p.number === selected) || participantList[0]) : undefined;
+  const criteria = current ? criteriaFor(current.category) : [];
   const visibleParticipants = participantList.filter(p => p.category === category);
   const visibleRankings = rankings.filter(r => r.category === adminCategory);
   function changeLanguage(next: Language) { setLanguage(next); localStorage.setItem("portal-language", next); }
   function categoryLabel(value: Category) { return text.categories[value]; }
   function criterionLabel(key: string, categoryValue: Category) {
-    if (key === "vocal") return categoryValue === "Vocal" ? text.criteria.vocal : text.criteria.technical;
-    if (key === "diction") return categoryValue === "Vocal" ? text.criteria.diction : text.criteria.musical;
-    if (key === "musical") return categoryValue === "Drums" ? text.criteria.groove : categoryValue === "Vocal" ? text.criteria.musical : text.criteria.accuracy;
-    if (key === "expression") return categoryValue === "Vocal" ? text.criteria.expression : text.criteria.musicalExpression;
-    if (key === "stage") return categoryValue === "Vocal" ? text.criteria.stage : text.criteria.performance;
-    if (key === "lyrics") return text.criteria.preparedness;
-    return text.criteria.impact;
+    if (categoryValue === "Vocal") {
+      if (key === "vocal") return text.criteria.vocal;
+      if (key === "diction") return text.criteria.diction;
+      if (key === "musical") return text.criteria.musical;
+      if (key === "expression") return text.criteria.expression;
+      if (key === "stage") return text.criteria.stage;
+    }
+    if (categoryValue === "Guitar") {
+      if (key === "vocal") return text.criteria.chordScale;
+      if (key === "diction") return text.criteria.rhythmTiming;
+      if (key === "musical") return text.criteria.playByEar;
+      if (key === "expression") return text.criteria.improvMusicality;
+      if (key === "stage") return text.criteria.keyTranspose;
+    }
+    if (categoryValue === "Drums") {
+      if (key === "vocal") return text.criteria.basicTechnique;
+      if (key === "diction") return text.criteria.timeGroove;
+      if (key === "musical") return text.criteria.grooveAdaptation;
+      if (key === "expression") return text.criteria.dynamics;
+      if (key === "stage") return text.criteria.musicality;
+    }
+    if (categoryValue === "Keyboard") {
+      if (key === "vocal") return text.criteria.chordProgression;
+      if (key === "diction") return text.criteria.rhythmTiming;
+      if (key === "musical") return text.criteria.playByEar;
+      if (key === "expression") return text.criteria.musicality;
+      if (key === "stage") return text.criteria.keyTranspose;
+    }
+    return key;
   }
   async function readJson(res: Response) {
     const text = await res.text();
@@ -163,8 +195,8 @@ export default function Home() {
   return <main className="judge-shell"><header className="topbar"><div><p className="eyebrow">MAC SIIT AUDITION 2026</p><h1>{judgeName}</h1></div><div className="progress-copy"><LanguageToggle language={language} onChange={changeLanguage} label={text.language} /><strong>{Object.keys(saved).length}/{participantList.length}</strong><span>{text.scored}</span></div></header>
     <nav className="category-tabs" aria-label={text.participants}>{categories.map(c => <button key={c} className={category===c?"active":""} onClick={()=>switchCategory(c)}>{categoryLabel(c)}<span>{participantList.filter(p=>p.category===c).length}</span></button>)}</nav>
     <div className="judge-grid"><aside><div className="aside-title"><span>{categoryLabel(category)} {text.participants}</span><b>{visibleParticipants.filter(p=>saved[p.number]).length}/{visibleParticipants.length} {text.complete}</b></div><div className="participant-list">{visibleParticipants.map(p => <button key={p.number} className={`${selected === p.number ? "active" : ""} ${saved[p.number] ? "scored" : ""}`} onClick={() => choose(p.number)}><span className="number">{p.number}</span><span>{participantLabel(p, language)}</span><i>{saved[p.number] ? "✓" : ""}</i></button>)}</div></aside>
-      <section className="score-panel"><div className="participant-head"><div><span>{categoryLabel(current.category).toUpperCase()} · {text.participantLabel.toUpperCase()} {current.number}</span><h2>{participantLabel(current, language)}</h2></div><div className="total"><strong>{total}</strong><span>/ 100</span></div></div>
-      <div className="criteria">{criteria.map(c => <div className="criterion" key={c.key}><label htmlFor={c.key}><span>{criterionLabel(c.key, current.category)}</span><small>0–{c.max} {text.points}</small></label><div className="score-input"><input id={c.key} type="number" min="0" max={c.max} inputMode="decimal" value={scores[c.key]} onChange={e => setScores(s => ({ ...s, [c.key]: Math.max(0, Math.min(c.max, Number(e.target.value))) }))}/><span>/ {c.max}</span></div></div>)}</div>
+      <section className="score-panel"><div className="participant-head"><div><span>{current ? categoryLabel(current.category).toUpperCase() : ""} · {text.participantLabel.toUpperCase()} {current?.number}</span><h2>{current ? participantLabel(current, language) : ""}</h2></div><div className="total"><strong>{total}</strong><span>/ 100</span></div></div>
+      <div className="criteria">{criteria.map(c => <div className="criterion" key={c.key}><label htmlFor={c.key}><span>{current ? criterionLabel(c.key, current.category) : ""}</span><small>0–{c.max} {text.points}</small></label><div className="score-input"><input id={c.key} type="number" min="0" max={c.max} inputMode="decimal" value={scores[c.key]} onChange={e => setScores(s => ({ ...s, [c.key]: Math.max(0, Math.min(c.max, Number(e.target.value))) }))}/><span>/ {c.max}</span></div></div>)}</div>
       <label className="note-label" htmlFor="note">{text.privateNote} <small>{text.optional}</small></label><textarea id="note" value={note} onChange={e => setNote(e.target.value)} placeholder={text.notePlaceholder} />
       <div className="save-row"><div aria-live="polite" className={status.includes("เรียบร้อย") || status === text.saved ? "success" : "error"}>{status}</div><div><button className="ghost" onClick={signOut}>{text.signOut}</button><button onClick={saveScore} disabled={busy}>{busy ? text.saving : saved[selected] ? text.updateScore : text.saveContinue}</button></div></div>
       </section></div></main>;
