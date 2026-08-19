@@ -33,10 +33,12 @@ const legacyParticipants = [
 const categoryNames: Record<string, string> = {
   "นักร้อง (Vocalists)": "Vocal",
   "มือกีต้าร์ (Guitarists)": "Guitar",
+  "มือเบส (Bassists)": "Bass",
   "มือกลอง (Drummers)": "Drums",
   "มือคียบอร์ด (Keyboardists)": "Keyboard",
   "Vocal": "Vocal",
   "Guitar": "Guitar",
+  "Bass": "Bass",
   "Drums": "Drums",
   "Keyboard": "Keyboard",
 };
@@ -268,7 +270,7 @@ async function portalApi(request: Request, env: Env) {
     }
     if (request.method === "GET" && user.role === "judge") {
       const result = await env.DB.prepare("SELECT *, vocal+diction+musical+expression+stage+lyrics+presentation+extra_a+extra_b AS total FROM scores WHERE judge_id = ?").bind(user.judgeId).all();
-      const scoreRows = result.results.map((row: Record<string, unknown>) => ({ ...row, participantNumber: row.participant_number, judgeId: row.judge_id, updatedAt: row.updated_at }));
+      const scoreRows = result.results.map((row: Record<string, unknown>) => ({ ...row, participantNumber: row.participant_number, judgeId: row.judge_id, updatedAt: row.updated_at, extraA: Number(row.extra_a || 0), extraB: Number(row.extra_b || 0) }));
       return Response.json({ role: user.role, name: user.name, scores: scoreRows, contestants: contestantList });
     }
     if (request.method === "GET" && user.role === "admin") {
@@ -282,11 +284,11 @@ async function portalApi(request: Request, env: Env) {
       if (body.action === "preview" || body.action === "import") return Response.json({ error: "Admin access required" }, { status: 403 });
       const participant = contestantList.find(p => p.participantNumber === participantNumber);
       if (!participant) return Response.json({ error: "ไม่พบผู้เข้าแข่งขัน" }, { status: 400 });
-      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : participant.category === "Guitar" ? { vocal:15,diction:15,musical:10,expression:10,stage:10,lyrics:15,presentation:5,extra_a:10,extra_b:10 } : participant.category === "Drums" ? { vocal:40,diction:20,musical:20,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : { vocal:30,diction:25,musical:25,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 }; const v: Record<string,number> = {};
-      for (const [key,max] of Object.entries(limits)) { const value=Number(body[key]); if(!Number.isFinite(value)||value<0||value>max) return Response.json({error:`${key} ต้องอยู่ระหว่าง 0–${max}`},{status:400}); v[key]=Math.round(value); }
+      const limits: Record<string, number> = participant.category === "Vocal" ? { vocal:30,diction:20,musical:15,expression:20,stage:15,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : participant.category === "Guitar" ? { vocal:15,diction:15,musical:10,expression:10,stage:10,lyrics:15,presentation:5,extra_a:10,extra_b:10 } : participant.category === "Bass" ? { vocal:35,diction:20,musical:20,expression:25,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : participant.category === "Drums" ? { vocal:40,diction:20,musical:20,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 } : { vocal:30,diction:25,musical:25,expression:20,stage:0,lyrics:0,presentation:0,extra_a:0,extra_b:0 }; const v: Record<string,number> = {};
+      for (const [key,max] of Object.entries(limits)) { const requestKey = key === "extra_a" ? "extraA" : key === "extra_b" ? "extraB" : key; const rawValue = body[requestKey] ?? (max === 0 ? 0 : undefined); const value=Number(rawValue); if(!Number.isFinite(value)||value<0||value>max) return Response.json({error:`${requestKey} ต้องอยู่ระหว่าง 0–${max}`},{status:400}); v[key]=Math.round(value); }
       const note=String(body.note||"").slice(0,500), updatedAt=new Date().toISOString();
       await env.DB.prepare("INSERT INTO scores (judge_id,participant_number,vocal,diction,musical,expression,stage,lyrics,presentation,extra_a,extra_b,note,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(judge_id,participant_number) DO UPDATE SET vocal=excluded.vocal,diction=excluded.diction,musical=excluded.musical,expression=excluded.expression,stage=excluded.stage,lyrics=excluded.lyrics,presentation=excluded.presentation,extra_a=excluded.extra_a,extra_b=excluded.extra_b,note=excluded.note,updated_at=excluded.updated_at").bind(user.judgeId,participantNumber,v.vocal,v.diction,v.musical,v.expression,v.stage,v.lyrics,v.presentation,v.extra_a,v.extra_b,note,updatedAt).run();
-      return Response.json({score:{participantNumber,...v,note,updatedAt,total:Object.values(v).reduce((a,b)=>a+b,0)}, name: user.name});
+      return Response.json({score:{participantNumber,...v,extraA:v.extra_a,extraB:v.extra_b,note,updatedAt,total:Object.values(v).reduce((a,b)=>a+b,0)}, name: user.name});
     }
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   } catch (error) {
